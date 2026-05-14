@@ -7,6 +7,7 @@ app = FastAPI()
 # INPUT MODEL
 # =========================
 class AutismData(BaseModel):
+
     A1: int
     A2: int
     A3: int
@@ -30,37 +31,149 @@ class AutismData(BaseModel):
 
 
 # =========================
+# WEIGHTS
+# =========================
+
+QUESTION_WEIGHTS = {
+
+    "A1": 10,
+    "A2": 15,
+    "A3": 10,
+    "A4": 10,
+    "A5": 15,
+    "A6": 10,
+    "A7": 10,
+    "A8": 5,
+    "A9": 10,
+    "A10": 5,
+
+    "Speech_Delay": 20,
+    "Learning_disorder": 15,
+    "Genetic_Disorders": 15,
+    "Depression": 10,
+    "Global_developmental_delay": 20,
+    "Social_Behavioural_Issues": 20
+}
+
+
+# =========================
+# TOTAL WEIGHT
+# =========================
+
+TOTAL_WEIGHT = sum(QUESTION_WEIGHTS.values())
+
+
+# =========================
 # AI LOGIC
 # =========================
+
 def predict_autism(data: AutismData):
 
-    # 🔥 حساب المجموع
-    score = (
-        data.A1 + data.A2 + data.A3 + data.A4 + data.A5 +
-        data.A6 + data.A7 + data.A8 + data.A9 + data.A10
-    )
+    score = 0
 
-    # 🔥 نسبة التوحد
-    probability = (score / 10) * 100
+    # =====================
+    # A QUESTIONS
+    # =====================
 
-    # 🔥 القرار
-    prediction = 1 if score >= 6 else 0
+    if data.A1 == 1:
+        score += QUESTION_WEIGHTS["A1"]
 
-    # 🔥 تحديد الشدة
-    if prediction == 0:
+    if data.A2 == 1:
+        score += QUESTION_WEIGHTS["A2"]
+
+    if data.A3 == 1:
+        score += QUESTION_WEIGHTS["A3"]
+
+    if data.A4 == 1:
+        score += QUESTION_WEIGHTS["A4"]
+
+    if data.A5 == 1:
+        score += QUESTION_WEIGHTS["A5"]
+
+    if data.A6 == 1:
+        score += QUESTION_WEIGHTS["A6"]
+
+    if data.A7 == 1:
+        score += QUESTION_WEIGHTS["A7"]
+
+    if data.A8 == 1:
+        score += QUESTION_WEIGHTS["A8"]
+
+    if data.A9 == 1:
+        score += QUESTION_WEIGHTS["A9"]
+
+    if data.A10 == 1:
+        score += QUESTION_WEIGHTS["A10"]
+
+    # =====================
+    # MEDICAL DATA
+    # =====================
+
+    if data.Speech_Delay.lower() == "yes":
+        score += QUESTION_WEIGHTS["Speech_Delay"]
+
+    if data.Learning_disorder.lower() == "yes":
+        score += QUESTION_WEIGHTS["Learning_disorder"]
+
+    if data.Genetic_Disorders.lower() == "yes":
+        score += QUESTION_WEIGHTS["Genetic_Disorders"]
+
+    if data.Depression.lower() == "yes":
+        score += QUESTION_WEIGHTS["Depression"]
+
+    if data.Global_developmental_delay.lower() == "yes":
+        score += QUESTION_WEIGHTS["Global_developmental_delay"]
+
+    if data.Social_Behavioural_Issues.lower() == "yes":
+        score += QUESTION_WEIGHTS["Social_Behavioural_Issues"]
+
+    # =====================
+    # AGE EFFECT
+    # =====================
+
+    if data.Age_Years < 5:
+        score += 5
+
+    # =====================
+    # PROBABILITY
+    # =====================
+
+    probability = (score / TOTAL_WEIGHT) * 100
+
+    # =====================
+    # PREDICTION
+    # =====================
+
+    prediction = 1 if probability >= 50 else 0
+
+    # =====================
+    # SEVERITY
+    # =====================
+
+    if probability < 30:
         severity = "لا يوجد توحد"
+
+    elif probability < 50:
+        severity = "خفيف"
+
+    elif probability < 75:
+        severity = "متوسط"
+
     else:
-        if score <= 3:
-            severity = "خفيف"
-        elif score <= 7:
-            severity = "متوسط"
-        else:
-            severity = "شديد"
+        severity = "شديد"
+
+    # =====================
+    # RETURN
+    # =====================
 
     return {
+
         "prediction": prediction,
+
         "score": score,
+
         "probability": round(probability, 2),
+
         "severity": severity
     }
 
@@ -68,20 +181,28 @@ def predict_autism(data: AutismData):
 # =========================
 # ENDPOINT
 # =========================
+
 @app.post("/predict")
 def predict(data: AutismData):
 
     result = predict_autism(data)
 
     return {
+
         "status": "success",
+
         "result": result
     }
 
 
 # =========================
-# ROOT (اختياري)
+# ROOT
 # =========================
+
 @app.get("/")
 def home():
-    return {"message": "Autism AI API is running 🚀"}
+
+    return {
+
+        "message": "Autism AI API is running 🚀"
+    }
