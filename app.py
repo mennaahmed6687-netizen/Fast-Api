@@ -1,11 +1,33 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# =========================
+# FASTAPI APP
+# =========================
 
 app = FastAPI()
 
 # =========================
+# CORS
+# =========================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "*"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =========================
 # INPUT MODEL
 # =========================
+
 class AutismData(BaseModel):
 
     A1: int
@@ -55,13 +77,11 @@ QUESTION_WEIGHTS = {
     "Social_Behavioural_Issues": 20
 }
 
-
 # =========================
 # TOTAL WEIGHT
 # =========================
 
 TOTAL_WEIGHT = sum(QUESTION_WEIGHTS.values())
-
 
 # =========================
 # AI LOGIC
@@ -72,60 +92,40 @@ def predict_autism(data: AutismData):
     score = 0
 
     # =====================
-    # A QUESTIONS
+    # QUESTIONS
     # =====================
 
-    if data.A1 == 1:
-        score += QUESTION_WEIGHTS["A1"]
+    questions = [
+        "A1", "A2", "A3", "A4", "A5",
+        "A6", "A7", "A8", "A9", "A10"
+    ]
 
-    if data.A2 == 1:
-        score += QUESTION_WEIGHTS["A2"]
+    for question in questions:
 
-    if data.A3 == 1:
-        score += QUESTION_WEIGHTS["A3"]
+        value = getattr(data, question)
 
-    if data.A4 == 1:
-        score += QUESTION_WEIGHTS["A4"]
-
-    if data.A5 == 1:
-        score += QUESTION_WEIGHTS["A5"]
-
-    if data.A6 == 1:
-        score += QUESTION_WEIGHTS["A6"]
-
-    if data.A7 == 1:
-        score += QUESTION_WEIGHTS["A7"]
-
-    if data.A8 == 1:
-        score += QUESTION_WEIGHTS["A8"]
-
-    if data.A9 == 1:
-        score += QUESTION_WEIGHTS["A9"]
-
-    if data.A10 == 1:
-        score += QUESTION_WEIGHTS["A10"]
+        if value == 1:
+            score += QUESTION_WEIGHTS[question]
 
     # =====================
     # MEDICAL DATA
     # =====================
 
-    if data.Speech_Delay.lower() == "yes":
-        score += QUESTION_WEIGHTS["Speech_Delay"]
+    medical_fields = [
+        "Speech_Delay",
+        "Learning_disorder",
+        "Genetic_Disorders",
+        "Depression",
+        "Global_developmental_delay",
+        "Social_Behavioural_Issues"
+    ]
 
-    if data.Learning_disorder.lower() == "yes":
-        score += QUESTION_WEIGHTS["Learning_disorder"]
+    for field in medical_fields:
 
-    if data.Genetic_Disorders.lower() == "yes":
-        score += QUESTION_WEIGHTS["Genetic_Disorders"]
+        value = getattr(data, field)
 
-    if data.Depression.lower() == "yes":
-        score += QUESTION_WEIGHTS["Depression"]
-
-    if data.Global_developmental_delay.lower() == "yes":
-        score += QUESTION_WEIGHTS["Global_developmental_delay"]
-
-    if data.Social_Behavioural_Issues.lower() == "yes":
-        score += QUESTION_WEIGHTS["Social_Behavioural_Issues"]
+        if value.lower() == "yes":
+            score += QUESTION_WEIGHTS[field]
 
     # =====================
     # AGE EFFECT
@@ -169,31 +169,35 @@ def predict_autism(data: AutismData):
     return {
 
         "prediction": prediction,
-
         "score": score,
-
         "probability": round(probability, 2),
-
         "severity": severity
     }
 
-
 # =========================
-# ENDPOINT
+# PREDICT ENDPOINT
 # =========================
 
 @app.post("/predict")
 def predict(data: AutismData):
 
-    result = predict_autism(data)
+    try:
 
-    return {
+        result = predict_autism(data)
 
-        "status": "success",
+        return {
 
-        "result": result
-    }
+            "status": "success",
+            "result": result
+        }
 
+    except Exception as e:
+
+        return {
+
+            "status": "error",
+            "message": str(e)
+        }
 
 # =========================
 # ROOT
